@@ -1,7 +1,13 @@
 import numpy as np
+import scipy 
+from scipy import stats
+import scipy.optimize as opt
+from scipy.interpolate import CubicSpline
+import statsmodels
+
 
 class CompetitiveStorageModel:
-    def __init__(self, a: float, b: float, delta: float, mu: float, sigma: float, rho: float, r: float = 0.0) -> None:
+    def __init__(self, a, b, delta, mu, sigma, rho, r = 0.0) -> None:
         """
         Initialize a competitive storage model object.
 
@@ -20,38 +26,34 @@ class CompetitiveStorageModel:
         self.mu = mu
         self.sigma = sigma
         self.rho = rho
-        self.r = r
-
-        # Placeholder variables that will be modified later
-        self.P_t = None  # Current Price
-        self.z_t = None  # Current Shock
-        self.I_t = None  # Current Inventory
-        self.x_t = None  # Current amount on-hand
+        self.r = r 
 
     def __repr__(self) -> str:
-        """
-        Return a string representation of the model parameters.
-        """
         return (f"CompetitiveStorageModel(a={self.a}, b={self.b}, r={self.r}, delta={self.delta}, "
                 f"mu={self.mu}, sigma={self.sigma}, rho={self.rho})")
 
     def inverse_demand(self, z):
         """
-        Generate an inverse demand curve.
+        Generate a linear inverse demand curve.
 
         Parameters:
-        z (np.ndarray): Array of randomly generated shocks
+        z (np.ndarray): Array of harvest quantities
+
+        Returns:
+        np.ndarray: Array of estimated price values based on coinciding shock values.
         """
         return self.a + self.b * z
 
-    def generate_shocks(self, n: int) -> np.ndarray:
+    def generate_shocks(self, n) -> np.ndarray:
         """
         Generate a series of harvest shocks based on the AR(1) process. We use the 
-        parameters mu (mean) and sigma (std dev) in this process defined by the model
-        to randomy generate these shocks.
+        parameters mu (mean) and sigma (std dev) to define the initial shock value
+        and estimate the succeeding shock values as a linear autoregressive process.
+
+        z_{t+1} - μ = ρ(z_{t}-μ) + σϵ_{t+1}
 
         Parameters:
-        n (int): Number of shocks to generate
+        n (int): Number of time periods
 
         Returns:
         np.ndarray: Array of generated harvest shocks
@@ -61,6 +63,21 @@ class CompetitiveStorageModel:
         for t in range(1, n):
             shocks[t] = self.rho * (shocks[t-1] - self.mu) + np.random.normal(0, self.sigma)
         return shocks
+    
+    def initial_state(self, inventory, z) -> float:
+        """
+        Calculates initial state variable for the price simulation function.
 
+        Parameters:
+        inventory (int): Initial inventory quantity
+        z (np.ndarray): Array of harvest quantities
+
+        Returns:
+        float: Value of initial state variable (amount on hand)
+        """
+        return inventory+z[0]
+    
+    def eq_price_fn(self):
+        pass
     
 
